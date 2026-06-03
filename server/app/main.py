@@ -9,7 +9,7 @@ from __future__ import annotations
 import hashlib
 import json
 
-from fastapi import FastAPI, HTTPException, Request
+from fastapi import FastAPI, HTTPException
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import FileResponse, StreamingResponse
 
@@ -35,7 +35,7 @@ def _require_project(pid: str) -> Project:
     try:
         return store.get_project(pid)
     except FileNotFoundError:
-        raise HTTPException(404, f"project {pid} not found")
+        raise HTTPException(404, f"project {pid} not found") from None
 
 
 @app.get("/api/health")
@@ -176,7 +176,7 @@ def get_artifact(pid: str, kind: str):
     try:
         return store.load_artifact(pid, kind)
     except FileNotFoundError as e:
-        raise HTTPException(404, str(e))
+        raise HTTPException(404, str(e)) from e
 
 
 @app.get("/api/projects/{pid}/artifacts/{kind}/versions/{version}")
@@ -184,7 +184,7 @@ def get_artifact_version(pid: str, kind: str, version: int):
     try:
         return store.load_artifact(pid, kind, version)
     except FileNotFoundError as e:
-        raise HTTPException(404, str(e))
+        raise HTTPException(404, str(e)) from e
 
 
 # ── 媒体文件（渲染产物 / 音频）──────────────────────────────────────────────────
@@ -208,7 +208,7 @@ async def export_web(pid: str):
     try:
         html_path = await render_bridge.export_web_deck(pid)
     except render_bridge.RenderError as e:
-        raise HTTPException(500, str(e))
+        raise HTTPException(500, str(e)) from e
     filename = f"{project.title or pid}.html"
     return FileResponse(str(html_path), media_type="text/html; charset=utf-8",
                         filename=filename)
@@ -216,8 +216,10 @@ async def export_web(pid: str):
 
 # ── provider 配置 ─────────────────────────────────────────────────────────────
 @app.get("/api/providers")
-def get_providers() -> ProviderConfig:
-    return store.load_providers()
+def get_providers() -> dict:
+    # exclude_none：可选字段为空时省略键（disabled 的 provider 没有 baseUrl 等），
+    # 匹配前端 Zod 的 .optional()（不接受 null）。
+    return store.load_providers().model_dump(mode="json", exclude_none=True)
 
 
 @app.put("/api/providers")
