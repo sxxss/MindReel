@@ -14,11 +14,13 @@ from __future__ import annotations
 import json
 import math
 import re
+import secrets
 from typing import Any
 
 from pydantic import BaseModel, ValidationError, field_validator
 
 from ..models import (
+    AnimationOp,
     Curriculum,
     Knowledge,
     Project,
@@ -36,6 +38,14 @@ ANIMATION_OP_KINDS = ["enter", "exit", "move", "morph", "highlight", "trace", "a
 
 # 输出协议分隔符：HTML 不进 JSON，避免「大段 HTML 转义进 JSON 字符串」导致的解析崩溃。
 STEP_HTML_DELIM = "@@@HTML:"
+
+# Node 渲染端用 nanoid 校验 id（^[A-Za-z0-9_-]{6,64}$）。模型在结构里编的 id（如 sh1/sc1）
+# 常不合规，且这些 id 不被别处引用，统一在代码里重新生成。
+_NANO_ALPHABET = "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789"
+
+
+def _nano(n: int = 12) -> str:
+    return "".join(secrets.choice(_NANO_ALPHABET) for _ in range(n))
 
 
 # ── HtmlSlide props 模型（用于生成 schema 提示 + 校验/修复）──────────────────────
@@ -137,8 +147,30 @@ def _assemble_scenes(struct: ChapterStructure, html_blocks: dict[str, str],
         props: dict[str, Any] = {"steps": steps[:12]}
         if sc.title and sc.title.strip():
             props = {"title": sc.title.strip(), "steps": steps[:12]}
-        scenes.append(DraftScene(chapterId=chapter_id, sceneId=sc.sceneId,
-                                 templateId="HtmlSlide", props=props, shots=sc.shots))
+
+        # 规范化 shots：重发合法 nanoid、钳正时长(>0)、保证每个 shot 至少 1 个动画，
+        # 使其能通过 Node 渲染端的严格 Zod 校验（模型常给 sh1 这种短 id 或 durationMs:0）。
+        step_ids = [st.id for st in sc.steps]
+        norm_shots = []
+        for i, sh in enumerate(sc.shots):
+            ops = [
+                op.model_copy(update={"id": _nano(), "durationMs": max(1, op.durationMs)})
+                for op in sh.animationOps
+            ]
+            if not ops:  # Node 端要求每个 shot 至少 1 个动画，补一个占位
+                ops = [AnimationOp(id=_nano(), kind="enter",
+                                   targetRef=step_ids[0] if step_ids else f"s{i}",
+                                   ease="easeInOut", durationMs=600)]
+            norm_shots.append(sh.model_copy(update={
+                "id": _nano(),
+                "anchorTimeMs": max(0, sh.anchorTimeMs),
+                "durationMs": max(1, sh.durationMs),
+                "animationOps": ops,
+            }))
+
+        sid = sc.sceneId if re.fullmatch(r"[A-Za-z0-9_-]{6,64}", sc.sceneId or "") else _nano()
+        scenes.append(DraftScene(chapterId=chapter_id, sceneId=sid,
+                                 templateId="HtmlSlide", props=props, shots=norm_shots))
     if not scenes:
         raise ProviderError("结构里没有 scene")
     return scenes

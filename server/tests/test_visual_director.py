@@ -34,7 +34,11 @@ def test_assembles_scene_from_structure_and_html_blocks():
     htmls = [s["html"] for s in sc.props["steps"]]
     assert len(htmls) == 2
     assert '"引号"' in htmls[0] and "\n" in htmls[0]   # 引号与换行原样保留
-    assert sc.shots[0].id == "sh1"
+    # shot id 被规范化成合法 nanoid（模型给的 sh1 太短，会被重发），时长被钳正 >0
+    import re
+    assert re.fullmatch(r"[A-Za-z0-9_-]{6,64}", sc.shots[0].id)
+    assert sc.shots[0].durationMs > 0
+    assert all(op.durationMs > 0 for op in sc.shots[0].animationOps)
 
 
 def test_html_block_with_code_fence_is_unwrapped():
@@ -50,6 +54,21 @@ def test_html_block_with_code_fence_is_unwrapped():
     )
     scenes = parse_chapter_payload(payload, "ch1")
     assert scenes[0].props["steps"][0]["html"] == "<div>带围栏</div>"
+
+
+def test_normalizes_bad_ids_and_zero_durations():
+    import re
+    payload = (
+        '{"scenes":[{"sceneId":"sc1","steps":[{"id":"s1"}],'    # sc1 太短(<6) → 应重发
+        '"shots":[{"id":"x","beatRefs":["b1xxxx"],"anchorTimeMs":0,"durationMs":0,"camera":"focus",'
+        '"animationOps":[{"id":"a","kind":"enter","targetRef":"s1","ease":"easeInOut","durationMs":0}]}]}]}\n'
+        '@@@HTML:s1\n<div>x</div>\n'
+    )
+    sc = parse_chapter_payload(payload, "ch1")[0]
+    assert re.fullmatch(r"[A-Za-z0-9_-]{6,64}", sc.sceneId)
+    assert re.fullmatch(r"[A-Za-z0-9_-]{6,64}", sc.shots[0].id)
+    assert sc.shots[0].durationMs >= 1
+    assert sc.shots[0].animationOps[0].durationMs >= 1
 
 
 def test_missing_html_block_raises():
