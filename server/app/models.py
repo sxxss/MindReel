@@ -5,7 +5,7 @@
 """
 from __future__ import annotations
 
-from typing import Any, Literal, Optional
+from typing import Any, Literal
 
 from pydantic import BaseModel, Field
 
@@ -83,8 +83,8 @@ class AnimationOp(BaseModel):
     id: str
     kind: AnimationOpKind
     targetRef: str
-    fromState: Optional[dict[str, Any]] = None
-    toState: Optional[dict[str, Any]] = None
+    fromState: dict[str, Any] | None = None
+    toState: dict[str, Any] | None = None
     ease: str = "easeInOut"
     durationMs: int = 600
 
@@ -134,7 +134,7 @@ class TimelineAnimation(BaseModel):
     targetRef: str
     startMs: int
     endMs: int
-    squeezeFactor: Optional[float] = None
+    squeezeFactor: float | None = None
 
 
 class TimelineShot(BaseModel):
@@ -155,8 +155,8 @@ class TimelineScene(BaseModel):
 class TimelineWarning(BaseModel):
     code: Literal["scene-duration-drift", "animation-overflow", "project-duration-drift"]
     message: str
-    sceneId: Optional[str] = None
-    shotId: Optional[str] = None
+    sceneId: str | None = None
+    shotId: str | None = None
 
 
 class Timeline(BaseModel):
@@ -173,14 +173,14 @@ class SourceDocument(BaseModel):
     body: str
     digest: str
     createdAt: str
-    url: Optional[str] = None
+    url: str | None = None
 
 
 class ArtifactRef(BaseModel):
     kind: str
     version: int
     createdAt: str
-    createdBy: Optional[str] = None
+    createdBy: str | None = None
 
 
 class Project(BaseModel):
@@ -204,33 +204,33 @@ class CreateProjectInput(BaseModel):
     audience: str
     durationTargetSeconds: int = Field(ge=60, le=240)
     language: Literal["zh-CN"] = "zh-CN"
-    theme: Optional[ThemeId] = None
+    theme: ThemeId | None = None
 
 
 class UpdateProjectInput(BaseModel):
-    title: Optional[str] = None
-    topic: Optional[str] = None
-    audience: Optional[str] = None
-    durationTargetSeconds: Optional[int] = Field(default=None, ge=60, le=240)
-    theme: Optional[ThemeId] = None
-    status: Optional[ProjectStatus] = None
+    title: str | None = None
+    topic: str | None = None
+    audience: str | None = None
+    durationTargetSeconds: int | None = Field(default=None, ge=60, le=240)
+    theme: ThemeId | None = None
+    status: ProjectStatus | None = None
 
 
 class AppendSourceInput(BaseModel):
     kind: Literal["text", "markdown", "url"]
     title: str
     body: str
-    url: Optional[str] = None
+    url: str | None = None
 
 
 # ── provider 配置 ─────────────────────────────────────────────────────────────
 class ProviderEntry(BaseModel):
     provider: str = "openai-compatible"
-    baseUrl: Optional[str] = None
-    apiKey: Optional[str] = None
-    model: Optional[str] = None
-    voice: Optional[str] = None
-    note: Optional[str] = None
+    baseUrl: str | None = None
+    apiKey: str | None = None
+    model: str | None = None
+    voice: str | None = None
+    note: str | None = None
 
     model_config = {"extra": "allow"}
 

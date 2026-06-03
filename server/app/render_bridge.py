@@ -44,7 +44,7 @@ async def render_project(project_id: str, output_path: str | Path | None = None,
     )
     try:
         stdout, stderr = await asyncio.wait_for(proc.communicate(), timeout=timeout_seconds)
-    except asyncio.TimeoutError as e:
+    except TimeoutError as e:
         proc.kill()
         raise RenderError(f"渲染超时（>{timeout_seconds}s）") from e
 
@@ -78,7 +78,7 @@ async def export_web_deck(project_id: str, output_path: str | Path | None = None
     )
     try:
         _stdout, stderr = await asyncio.wait_for(proc.communicate(), timeout=timeout_seconds)
-    except asyncio.TimeoutError as e:
+    except TimeoutError as e:
         proc.kill()
         raise RenderError(f"网页导出超时（>{timeout_seconds}s）") from e
     if proc.returncode != 0:

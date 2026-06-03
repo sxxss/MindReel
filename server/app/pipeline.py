@@ -9,8 +9,7 @@ from __future__ import annotations
 
 import asyncio
 import secrets
-from dataclasses import dataclass, field
-from typing import Any, Optional
+from dataclasses import dataclass
 
 from . import store
 from .agents.curriculum import run_curriculum
@@ -19,7 +18,7 @@ from .agents.script import run_script
 from .agents.timeline_solver import solve_timeline
 from .agents.visual_director import run_visual_director
 from .agents.voice import run_voice
-from .models import Curriculum, Knowledge, Script, SceneSpec, VoiceTrack
+from .models import Curriculum, Knowledge, SceneSpec, Script, VoiceTrack
 from .render_bridge import render_project
 
 # 内部阶段名（流水线执行顺序）
@@ -64,9 +63,9 @@ class Job:
     status: str = "pending"  # pending / running / succeeded / failed / canceled
     created_at: str = ""
     updated_at: str = ""
-    options: Optional[dict] = None
-    artifact_ref: Optional[dict] = None
-    error_message: Optional[str] = None
+    options: dict | None = None
+    artifact_ref: dict | None = None
+    error_message: str | None = None
 
     def public(self) -> dict:
         out = {
@@ -89,7 +88,7 @@ class PipelineManager:
         self.events_by_project: dict[str, list[dict]] = {}
         self.subscribers: dict[str, set[asyncio.Queue]] = {}
 
-    def get_job(self, job_id: str) -> Optional[Job]:
+    def get_job(self, job_id: str) -> Job | None:
         return self.jobs.get(job_id)
 
     def project_events(self, project_id: str) -> list[dict]:

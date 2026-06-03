@@ -11,7 +11,7 @@ from __future__ import annotations
 import json
 import re
 import secrets
-from datetime import datetime, timezone
+from datetime import UTC, datetime
 from pathlib import Path
 from typing import Any
 
@@ -26,7 +26,7 @@ _LATEST_KEY = {"qa-report": "qaReport"}  # latestArtifacts 里的 key 映射
 
 
 def now_iso() -> str:
-    return datetime.now(timezone.utc).isoformat().replace("+00:00", "Z")
+    return datetime.now(UTC).isoformat().replace("+00:00", "Z")
 
 
 def new_id(prefix: str = "project") -> str:

@@ -1,8 +1,6 @@
 """research agent —— 把资料压成可教学的事实清单。"""
 from __future__ import annotations
 
-import json
-
 from ..models import Knowledge, Project, ProviderEntry, SourceDocument
 from .prompting import build_system_prompt, with_revision_instructions
 from .runner import Emit, run_json_agent

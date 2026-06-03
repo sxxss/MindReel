@@ -11,13 +11,11 @@ from __future__ import annotations
 
 import json
 import math
-import re
-from typing import Any, Optional
+from typing import Any
 
 from pydantic import BaseModel, ValidationError, field_validator
 
 from ..models import (
-    AnimationOpKind,
     Curriculum,
     Knowledge,
     Project,
@@ -27,8 +25,8 @@ from ..models import (
     ScriptSegment,
     Shot,
 )
-from .prompting import build_system_prompt, with_revision_instructions
 from ..providers import ProviderError, generate_json
+from .prompting import build_system_prompt, with_revision_instructions
 from .runner import Emit
 
 ANIMATION_OP_KINDS = ["enter", "exit", "move", "morph", "highlight", "trace", "annotate"]
@@ -38,7 +36,7 @@ ANIMATION_OP_KINDS = ["enter", "exit", "move", "morph", "highlight", "trace", "a
 class HtmlStep(BaseModel):
     model_config = {"extra": "forbid"}
     html: str
-    caption: Optional[str] = None
+    caption: str | None = None
 
     @field_validator("html")
     @classmethod
@@ -50,7 +48,7 @@ class HtmlStep(BaseModel):
 
 class HtmlSlideProps(BaseModel):
     model_config = {"extra": "forbid"}
-    title: Optional[str] = None
+    title: str | None = None
     steps: list[HtmlStep]
 
     @field_validator("steps")

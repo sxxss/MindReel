@@ -6,12 +6,11 @@
 from __future__ import annotations
 
 import asyncio
-import json
 import subprocess
 from pathlib import Path
 
 from ..config import settings
-from ..models import Project, Script, ProviderEntry, VoiceTrack
+from ..models import Project, ProviderEntry, Script, VoiceTrack
 from ..providers import ProviderError, synthesize_speech
 from .runner import Emit
 

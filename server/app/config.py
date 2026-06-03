@@ -2,7 +2,7 @@
 from __future__ import annotations
 
 from pathlib import Path
-from typing import Literal, Optional
+from typing import Literal
 
 from pydantic_settings import BaseSettings, SettingsConfigDict
 
@@ -19,7 +19,7 @@ class Settings(BaseSettings):
     # 默认指向 monorepo 根的 data/；可用 AUTO_DATA_DIR 覆盖（Docker 里会设）。
     data_dir: Path = REPO_ROOT / "data"
     # 可用 AUTO_PROVIDERS_PATH 覆盖；不设则取 data_dir/providers.json
-    providers_path: Optional[Path] = None
+    providers_path: Path | None = None
     # mock：占位/离线；configured：用 /providers 配置的真实模型
     provider_mode: Literal["mock", "configured"] = "configured"
     worker_enabled: bool = True
