@@ -49,42 +49,47 @@ def _unwrap(value: Any) -> Any:
 
 
 def _balanced_spans(text: str) -> list[str]:
-    """扫描出所有顶层平衡的 {...} / [...] 子串（正确处理字符串字面量与转义）。
+    """扫描出所有【真正顶层】的平衡 {...} / [...] 子串（统一深度，正确处理字符串/转义）。
 
-    模型有时会先吐一段坏 JSON、再用 ```json 围栏重写一份完整的；
-    把每个候选都抽出来逐个尝试解析，能把这种「写了两遍」的情况救回来。
+    用单一深度计数（{ 和 [ 都 +1，} 和 ] 都 -1），只在深度归零时收一个跨度——
+    这样对象里【嵌套】的数组/对象不会被当成候选。否则一个外层对象坏掉时，
+    会误把里面某个恰好合法的嵌套数组（如 prerequisites）当结果返回。
+    模型「先吐坏 JSON、再重写一份」这种顶层并列的情况仍能各自被收到。
     """
     spans: list[str] = []
-    for open_ch, close_ch in (("{", "}"), ("[", "]")):
-        depth = 0
-        start = -1
-        in_str = False
-        esc = False
-        for i, ch in enumerate(text):
-            if in_str:
-                if esc:
-                    esc = False
-                elif ch == "\\":
-                    esc = True
-                elif ch == '"':
-                    in_str = False
-                continue
-            if ch == '"':
-                in_str = True
-            elif ch == open_ch:
-                if depth == 0:
-                    start = i
-                depth += 1
-            elif ch == close_ch and depth > 0:
-                depth -= 1
-                if depth == 0 and start >= 0:
-                    spans.append(text[start: i + 1])
+    depth = 0
+    start = -1
+    in_str = False
+    esc = False
+    for i, ch in enumerate(text):
+        if in_str:
+            if esc:
+                esc = False
+            elif ch == "\\":
+                esc = True
+            elif ch == '"':
+                in_str = False
+            continue
+        if ch == '"':
+            in_str = True
+        elif ch in "{[":
+            if depth == 0:
+                start = i
+            depth += 1
+        elif ch in "}]" and depth > 0:
+            depth -= 1
+            if depth == 0 and start >= 0:
+                spans.append(text[start: i + 1])
     return spans
 
 
+_VALUE_START = set('"{[+-.0123456789') | {"t", "f", "n"}  # JSON 值合法的起始字符
+
+
 def _repair_json(text: str) -> str:
-    """字符串感知地修两类 deepseek 高频小毛病（只在字符串外动手，绝不碰 HTML 内容）：
+    """字符串感知地修三类 deepseek 高频小毛病（只在字符串外动手，绝不碰 HTML 内容）：
     - 空值：`"durationMs":,` / `"k": }` → 补 0（本 schema 里空值几乎都是数字字段）。
+    - 值位置数字前的乱码：`"expectedSeconds":島25` → `:25`（模型偶尔在数字前粘个杂字符）。
     - 拖尾逗号：`,}` / `,]` → 删掉逗号。
     """
     out: list[str] = []
@@ -116,6 +121,15 @@ def _repair_json(text: str) -> str:
                 out.append(": 0")
                 i += 1
                 continue
+            # 冒号后是「非法起始字符的杂串 + 数字」→ 删掉杂串，保留数字
+            if j < n and text[j] not in _VALUE_START and text[j] not in ",}]":
+                m = j
+                while m < n and text[m] not in _VALUE_START and text[m] not in ' \t\r\n,}]"':
+                    m += 1
+                if m < n and text[m] in "0123456789":
+                    out.append(":")
+                    i = m  # 跳过冒号后的空白与杂串，直达数字
+                    continue
         if ch == ",":
             j = i + 1
             while j < n and text[j] in " \t\r\n":

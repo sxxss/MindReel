@@ -38,6 +38,22 @@ def test_repair_does_not_touch_strings():
     assert _repair_json(src) == src
 
 
+def test_strips_junk_char_before_number():
+    # deepseek 偶尔在数字字段前粘个乱码字（如 島25）→ 应修成 25，且不能误返回嵌套数组
+    bad = ('{"title":"t","prerequisites":["a","b"],'
+           '"chapters":[{"expectedSeconds":島25,"kind":"hook"}]}')
+    r = _parse_content(bad)
+    assert isinstance(r, dict)
+    assert r["chapters"][0]["expectedSeconds"] == 25
+    assert r["prerequisites"] == ["a", "b"]
+
+
+def test_balanced_spans_ignores_nested_arrays():
+    # 外层对象坏掉时，不能把里面合法的嵌套数组当顶层结果
+    spans = _balanced_spans('{"a":1,"list":[1,2,3]}')
+    assert spans == ['{"a":1,"list":[1,2,3]}']
+
+
 def test_balanced_spans_extracts_each_object():
     spans = _balanced_spans('noise {"a":1} more [1,2] tail')
     assert '{"a":1}' in spans
