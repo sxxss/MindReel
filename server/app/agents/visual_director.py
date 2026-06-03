@@ -385,15 +385,18 @@ async def _generate_chapter_scenes(
     def has_invalid(scenes: list[DraftScene]) -> bool:
         return any(s.templateId == "HtmlSlide" and not _props_valid(s.props) for s in scenes)
 
+    needs_refine = False
     try:
         scenes = await call_llm("")
     except (ValidationError, ProviderError):
-        # 整个对象都没解析出来 → 退化为「用本章 beat 合成最小可用场景」
+        # 首次没拿到可用画面 → 先用本章 beat 合成最小可用场景，并标记需要精修一次
         scenes = [_fallback_scene(chapter, segment)]
+        needs_refine = True
 
-    if has_invalid(scenes):
+    if needs_refine or has_invalid(scenes):
+        # 面向用户的中性提示：不暴露内部字段名，呈现为「自动精修」而非报错
         if emit:
-            res = emit("agent.retry", f"章节「{chapter.id}」HtmlSlide props 非法，重试 1 次后兜底")
+            res = emit("scene.refine", f"正在精修章节「{chapter.id}」的画面…")
             if res is not None:
                 await res
         try:

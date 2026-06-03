@@ -10,23 +10,15 @@ build
 **/.env.local
 **/providers.json
 
-# local tooling / IDE
-.idea
-.claude
-.superpowers
+# 包管理 / 本地缓存
 .pnpm-store
 .tts-venv
 
-# runtime data, generated artifacts and local DB
+# 运行时数据与生成产物
 data
-packages/eval/reports
 
 # 本地 Docker 开发覆盖（自带 TTS 等，不进仓库）
 docker-compose.override.yml
-
-# AI 工具的内部规划/spec 文档，不开源
-docs/superpowers/
-.superpowers/
 
 # Python 后端
 server/.venv
