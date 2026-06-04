@@ -23,7 +23,7 @@ export const HtmlSlidePropsSchema = z
 
 type HtmlSlideProps = z.infer<typeof HtmlSlidePropsSchema>;
 
-// 注入给 LLM 写的 HTML 使用的主题变量 + 一小套工具类（统一质感、降低 AI 味）。
+// 注入给生成的 HTML 使用的主题变量 + 一小套工具类（统一质感、降低模板感）。
 const themeVars = (ctx: SceneTemplateRenderContext): Record<string, string> => ({
   "--ink": ctx.theme.ink,
   "--muted": ctx.theme.muted,

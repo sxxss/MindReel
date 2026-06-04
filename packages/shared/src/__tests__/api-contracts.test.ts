@@ -270,7 +270,7 @@ describe("API contracts", () => {
       },
       video: {
         provider: "disabled",
-        note: "Video provider interface is reserved for future AI video clips.",
+        note: "Video provider interface is reserved for future generated video clips.",
       },
       factCheck: {
         provider: "openai-compatible",
